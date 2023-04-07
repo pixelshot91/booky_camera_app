@@ -86,25 +86,15 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
                   await Future.delayed(const Duration(seconds: 0), () async {
                     await showDialog(
                       context: context,
-                      builder: (BuildContext _) {
-                        return SimpleDialog(
+                      builder: (BuildContext _) => SimpleDialog(
                           title: const Text('Select camera'),
-                          children: [
-                            SimpleDialogOption(
-                              onPressed: () {
-                                showInSnackBar('first option');
-                              },
-                              child: const Text('Treasury department'),
-                            ),
-                            SimpleDialogOption(
-                              onPressed: () {
-                                showInSnackBar('first option');
-                              },
-                              child: const Text('State department'),
-                            ),
-                          ],
-                        );
-                      },
+                          children: _cameras
+                              .where((c) => c.lensDirection == CameraLensDirection.back)
+                              .map((c) => SimpleDialogOption(
+                                    onPressed: () => _onNewCameraSelected(c),
+                                    child: Text('Camera ${c.name}'),
+                                  ))
+                              .toList()),
                     );
                   });
                 })
