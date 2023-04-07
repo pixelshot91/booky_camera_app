@@ -2,8 +2,29 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:gallery_saver/gallery_saver.dart';
+
+enum ItemState {
+  brandNew,
+  veryGood,
+  good,
+  medium;
+
+  String get loc {
+    switch (this) {
+      case ItemState.brandNew:
+        return 'Brand New';
+      case ItemState.veryGood:
+        return 'Very Good';
+
+      case ItemState.good:
+        return 'Good';
+
+      case ItemState.medium:
+        return 'Medium';
+    }
+  }
+}
 
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
@@ -116,6 +137,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
             child: Row(
               children: <Widget>[
                 _thumbnailWidget(),
+                _addMetadataButton(),
               ],
             ),
           ),
@@ -156,8 +178,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
 
     try {
       return Expanded(
-        child: Align(
-          alignment: Alignment.centerRight,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: Directory('/storage/emulated/0/DCIM/booky/$bundleName').listSync().map((e) {
@@ -172,42 +194,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
     }
   }
 
+  Widget _addMetadataButton() => IconButton(
+      icon: const Icon(Icons.keyboard_arrow_right),
+      onPressed: () => showDialog(context: context, builder: (BuildContext context) => const MetadataWidget()));
+
   /// Display a row of toggle to select the camera (or a message if no camera is available).
-  Widget _cameraTogglesRowWidget() {
-    final List<Widget> toggles = <Widget>[];
-
-    void onChanged(CameraDescription? description) {
-      if (description == null) {
-        return;
-      }
-
-      _onNewCameraSelected(description);
-    }
-
-    if (_cameras.isEmpty) {
-      SchedulerBinding.instance.addPostFrameCallback((_) async {
-        showInSnackBar('No camera found.');
-      });
-      return const Text('None');
-    } else {
-      for (final CameraDescription cameraDescription in _cameras) {
-        toggles.add(
-          SizedBox(
-            width: 90.0,
-            child: RadioListTile<CameraDescription>(
-              title: Icon(getCameraLensIcon(cameraDescription.lensDirection)),
-              groupValue: controller?.description,
-              value: cameraDescription,
-              onChanged: controller != null && controller!.value.isRecordingVideo ? null : onChanged,
-            ),
-          ),
-        );
-      }
-    }
-
-    return Row(children: toggles);
-  }
-
   String timestamp() => DateTime.now().millisecondsSinceEpoch.toString();
 
   void showInSnackBar(String message) {
@@ -356,6 +347,45 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
   void _showCameraException(CameraException e) {
     _logError(e.code, e.description);
     showInSnackBar('Error: ${e.code}\n${e.description}');
+  }
+}
+
+class MetadataWidget extends StatefulWidget {
+  const MetadataWidget({Key? key}) : super(key: key);
+
+  @override
+  State<MetadataWidget> createState() => _MetadataWidgetState();
+}
+
+class _MetadataWidgetState extends State<MetadataWidget> {
+  int? weight;
+  ItemState? itemState;
+
+  @override
+  Widget build(BuildContext context) {
+    return SimpleDialog(
+      title: const Text('Add the final metadata'),
+      children: [
+        TextFormField(
+          initialValue: '',
+          onChanged: (newText) => setState(() => weight = int.parse(newText)),
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            icon: Icon(Icons.scale),
+            labelText: 'Weight in grams',
+          ),
+          style: const TextStyle(fontSize: 20),
+        ),
+        DropdownButton<ItemState>(
+            hint: const Text('Book state'),
+            value: itemState,
+            items: ItemState.values.map((s) => DropdownMenuItem(value: s, child: Text(s.loc))).toList(),
+            onChanged: (state) => setState(() {
+                  itemState = state;
+                })),
+        IconButton(icon: const Icon(Icons.save), onPressed: () {})
+      ],
+    );
   }
 }
 
