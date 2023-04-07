@@ -79,34 +79,34 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
     return Scaffold(
       appBar: AppBar(title: const Text('Booky Camera app'), actions: [
         PopupMenuButton(
-          itemBuilder: (context) => [
+          itemBuilder: (_) => [
             PopupMenuItem(
                 child: const Text('Change camera'),
                 onTap: () async {
-                  showInSnackBar('Click');
-
-                  final res = await showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return SimpleDialog(
-                        title: const Text('Select assignment'),
-                        children: [
-                          SimpleDialogOption(
-                            onPressed: () {
-                              showInSnackBar('first option');
-                            },
-                            child: const Text('Treasury department'),
-                          ),
-                          SimpleDialogOption(
-                            onPressed: () {
-                              showInSnackBar('first option');
-                            },
-                            child: const Text('State department'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                  await Future.delayed(const Duration(seconds: 0), () async {
+                    await showDialog(
+                      context: context,
+                      builder: (BuildContext _) {
+                        return SimpleDialog(
+                          title: const Text('Select camera'),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () {
+                                showInSnackBar('first option');
+                              },
+                              child: const Text('Treasury department'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                showInSnackBar('first option');
+                              },
+                              child: const Text('State department'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  });
                 })
           ],
         ),
