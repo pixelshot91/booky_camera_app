@@ -40,11 +40,14 @@ void _logError(String code, String? message) {
 class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindingObserver, TickerProviderStateMixin {
   CameraController? controller;
   XFile? imageFile;
+  String bundleName = DateTime.now().toIso8601String().replaceAll(':', '_');
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _onNewCameraSelected(_cameras.first);
   }
 
   @override
@@ -74,9 +77,40 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Booky Camera app'),
-      ),
+      appBar: AppBar(title: const Text('Booky Camera app'), actions: [
+        PopupMenuButton(
+          itemBuilder: (context) => [
+            PopupMenuItem(
+                child: const Text('Change camera'),
+                onTap: () async {
+                  showInSnackBar('Click');
+
+                  final res = await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return SimpleDialog(
+                        title: const Text('Select assignment'),
+                        children: [
+                          SimpleDialogOption(
+                            onPressed: () {
+                              showInSnackBar('first option');
+                            },
+                            child: const Text('Treasury department'),
+                          ),
+                          SimpleDialogOption(
+                            onPressed: () {
+                              showInSnackBar('first option');
+                            },
+                            child: const Text('State department'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                })
+          ],
+        ),
+      ]),
       body: Column(
         children: <Widget>[
           Expanded(
@@ -91,7 +125,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
             padding: const EdgeInsets.all(5.0),
             child: Row(
               children: <Widget>[
-                _cameraTogglesRowWidget(),
                 _thumbnailWidget(),
               ],
             ),
@@ -115,26 +148,38 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
         ),
       );
     } else {
-      return CameraPreview(controller!);
+      return CameraPreview(
+        controller!,
+        child: GestureDetector(
+          onTapDown: (TapDownDetails details) => _onTakePictureButtonPressed(),
+        ),
+      );
     }
   }
 
   /// Display the thumbnail of the captured image or video.
   Widget _thumbnailWidget() {
-    return Expanded(
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (imageFile == null)
-              Container()
-            else
-              SizedBox(width: 64.0, height: 64.0, child: Image.file(File(imageFile!.path))),
-          ],
+    final imageFile = this.imageFile;
+    if (imageFile == null) {
+      return Container();
+    }
+
+    try {
+      return Expanded(
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: Directory('/storage/emulated/0/DCIM/booky/$bundleName').listSync().map((e) {
+              return SizedBox(width: 64.0, height: 64.0, child: Image.file(File(e.path)));
+            }).toList(),
+          ),
         ),
-      ),
-    );
+      );
+    } on PathNotFoundException catch (e) {
+      print('PathNotFoundException: $e');
+      return Text('$e');
+    }
   }
 
   /// Display a row of toggle to select the camera (or a message if no camera is available).
@@ -261,20 +306,19 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
     }
   }
 
-  void onTakePictureButtonPressed() {
-    takePicture().then((XFile? file) {
+  void _onTakePictureButtonPressed() {
+    takePicture().then((XFile? file) async {
       if (mounted) {
-        setState(() {
-          imageFile = file;
-        });
         if (file != null) {
-          showInSnackBar('Picture saved to ${file.path}');
-          GallerySaver.saveImage(file.path, albumName: "book_metadata_finder/1", toDcim: true).then((bool? success) {
-            /*setState(() {
-              firstButtonText = 'image saved!';
-            });*/
+          GallerySaver.saveImage(file.path, albumName: "booky/$bundleName", toDcim: true).then((bool? success) {
+            if (success != true) {
+              showInSnackBar('Error when saving image');
+            } else {
+              setState(() {
+                imageFile = file;
+              });
+            }
           });
-          // file.saveTo('/Internal storage/DCIM/flutter');
         }
       }
     });
