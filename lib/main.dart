@@ -1,30 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery_saver/gallery_saver.dart';
+import 'package:path/path.dart' as path;
+import 'package:permission_handler/permission_handler.dart';
 
-enum ItemState {
-  brandNew,
-  veryGood,
-  good,
-  medium;
-
-  String get loc {
-    switch (this) {
-      case ItemState.brandNew:
-        return 'Brand New';
-      case ItemState.veryGood:
-        return 'Very Good';
-
-      case ItemState.good:
-        return 'Good';
-
-      case ItemState.medium:
-        return 'Medium';
-    }
-  }
-}
+import 'common.dart' as common;
 
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
@@ -62,6 +45,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
   CameraController? controller;
   XFile? imageFile;
   String bundleName = DateTime.now().toIso8601String().replaceAll(':', '_');
+
+  String get getBundlePath => '/storage/emulated/0/DCIM/booky/$bundleName';
 
   @override
   void initState() {
@@ -182,7 +167,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
           scrollDirection: Axis.horizontal,
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: Directory('/storage/emulated/0/DCIM/booky/$bundleName').listSync().map((e) {
+            children: Directory(getBundlePath).listSync().map((e) {
               return SizedBox(width: 64.0, height: 64.0, child: Image.file(File(e.path)));
             }).toList(),
           ),
@@ -196,7 +181,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
 
   Widget _addMetadataButton() => IconButton(
       icon: const Icon(Icons.keyboard_arrow_right),
-      onPressed: () => showDialog(context: context, builder: (BuildContext context) => const MetadataWidget()));
+      onPressed: () => showDialog(
+          context: context,
+          builder: (BuildContext context) => MetadataWidget(
+                bundlePath: getBundlePath,
+              )));
 
   /// Display a row of toggle to select the camera (or a message if no camera is available).
   String timestamp() => DateTime.now().millisecondsSinceEpoch.toString();
@@ -351,15 +340,15 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
 }
 
 class MetadataWidget extends StatefulWidget {
-  const MetadataWidget({Key? key}) : super(key: key);
+  const MetadataWidget({required this.bundlePath});
+  final String bundlePath;
 
   @override
   State<MetadataWidget> createState() => _MetadataWidgetState();
 }
 
 class _MetadataWidgetState extends State<MetadataWidget> {
-  int? weight;
-  ItemState? itemState;
+  var metadata = common.Metadata();
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +357,7 @@ class _MetadataWidgetState extends State<MetadataWidget> {
       children: [
         TextFormField(
           initialValue: '',
-          onChanged: (newText) => setState(() => weight = int.parse(newText)),
+          onChanged: (newText) => setState(() => metadata.weightGrams = int.parse(newText)),
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             icon: Icon(Icons.scale),
@@ -376,14 +365,20 @@ class _MetadataWidgetState extends State<MetadataWidget> {
           ),
           style: const TextStyle(fontSize: 20),
         ),
-        DropdownButton<ItemState>(
+        DropdownButton<common.ItemState>(
             hint: const Text('Book state'),
-            value: itemState,
-            items: ItemState.values.map((s) => DropdownMenuItem(value: s, child: Text(s.loc))).toList(),
+            value: metadata.itemState,
+            items: common.ItemState.values.map((s) => DropdownMenuItem(value: s, child: Text(s.loc))).toList(),
             onChanged: (state) => setState(() {
-                  itemState = state;
+                  metadata.itemState = state;
                 })),
-        IconButton(icon: const Icon(Icons.save), onPressed: () {})
+        IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () async {
+              final managePerm = await Permission.manageExternalStorage.request();
+              print('managePerm = $managePerm');
+              File(path.join(widget.bundlePath, 'metadata.json')).writeAsStringSync(jsonEncode(metadata.toJson()));
+            })
       ],
     );
   }
