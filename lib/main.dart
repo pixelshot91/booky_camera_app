@@ -162,19 +162,20 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
     }
 
     try {
+      final images = Directory(getBundlePath).listSync().where((file) => path.extension(file.path) == '.jpg');
       return Expanded(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: Directory(getBundlePath).listSync().map((e) {
-              return SizedBox(width: 64.0, height: 64.0, child: Image.file(File(e.path)));
-            }).toList(),
+            children: images
+                .map((imgFile) => SizedBox(width: 64.0, height: 64.0, child: Image.file(File(imgFile.path))))
+                .toList(),
           ),
         ),
       );
     } on PathNotFoundException catch (e) {
-      print('PathNotFoundException: $e');
+      showInSnackBar('PathNotFoundException: $e');
       return Text('$e');
     }
   }
