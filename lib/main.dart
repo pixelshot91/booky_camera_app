@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:booky_camera_app/draggable_widget.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery_saver/gallery_saver.dart';
@@ -169,7 +170,10 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: images
-                .map((imgFile) => SizedBox(width: 64.0, height: 64.0, child: Image.file(File(imgFile.path))))
+                .map((imgFile) => DraggableWidget(
+                      child: SizedBox(width: 64.0, height: 64.0, child: Image.file(File(imgFile.path))),
+                      onVerticalDrag: () => setState(() => imgFile.deleteSync()),
+                    ))
                 .toList(),
           ),
         ),
