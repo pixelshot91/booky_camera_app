@@ -170,9 +170,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: images
-                .map((imgFile) => DraggableWidget(
-                      child: SizedBox(width: 64.0, height: 64.0, child: Image.file(File(imgFile.path))),
-                      onVerticalDrag: () => setState(() => imgFile.deleteSync()),
+                .map((imgFile) => SizedBox(
+                      width: 64,
+                      height: 64,
+                      child: DraggableWidget(
+                        child: Image.file(File(imgFile.path)),
+                        onVerticalDrag: () => setState(() => imgFile.deleteSync()),
+                      ),
                     ))
                 .toList(),
           ),
