@@ -148,8 +148,19 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
     } else {
       return CameraPreview(
         controller!,
-        child: GestureDetector(
-          onTapDown: (TapDownDetails details) => _onTakePictureButtonPressed(),
+        child: LayoutBuilder(
+          builder: (context, boxConstraints) => GestureDetector(
+            onTapDown: (TapDownDetails details) async {
+              _onViewFinderTap(details, boxConstraints);
+              // The auto focus is not instantaneous. We must wait a little while before taking the picture
+              // In release mode, if we
+              // wait 100 ms : blurry
+              // wait 300 ms : sharp
+              // The optimum delay shall lie between the bounds
+              await Future.delayed(const Duration(milliseconds: 300));
+              _onTakePictureButtonPressed();
+            },
+          ),
         ),
       );
     }
@@ -196,14 +207,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
                 bundlePath: getBundlePath,
               )));
 
-  /// Display a row of toggle to select the camera (or a message if no camera is available).
-  String timestamp() => DateTime.now().millisecondsSinceEpoch.toString();
-
   void showInSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
+  void _onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
     if (controller == null) {
       return;
     }
