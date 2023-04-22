@@ -45,13 +45,18 @@ void _logError(String code, String? message) {
 class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindingObserver, TickerProviderStateMixin {
   CameraController? controller;
   XFile? imageFile;
-  String bundleName = DateTime.now().toIso8601String().replaceAll(':', '_');
+  late String bundleName;
 
-  String get getBundlePath => '/storage/emulated/0/DCIM/booky/$bundleName';
+  Directory get getBundleDir => Directory('/storage/emulated/0/DCIM/booky/$bundleName');
+
+  void _generateNewFolderPath() {
+    bundleName = DateTime.now().toIso8601String().replaceAll(':', '_');
+  }
 
   @override
   void initState() {
     super.initState();
+    _generateNewFolderPath();
     WidgetsBinding.instance.addObserver(this);
 
     _onNewCameraSelected(_cameras.first);
@@ -120,12 +125,14 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
           ),
           Padding(
             padding: const EdgeInsets.all(5.0),
-            child: Row(
-              children: <Widget>[
-                _thumbnailWidget(),
-                _addMetadataButton(),
-              ],
-            ),
+            child: BottomWidget(
+                directory: getBundleDir,
+                onSubmit: () {
+                  setState(() {
+                    _generateNewFolderPath();
+                  });
+                  Navigator.pop(context);
+                }),
           ),
         ],
       ),
@@ -165,47 +172,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
       );
     }
   }
-
-  /// Display the thumbnail of the captured image or video.
-  Widget _thumbnailWidget() {
-    final imageFile = this.imageFile;
-    if (imageFile == null) {
-      return Container();
-    }
-
-    try {
-      final images = Directory(getBundlePath).listSync().where((file) => path.extension(file.path) == '.jpg');
-      return Expanded(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: images
-                .map((imgFile) => SizedBox(
-                      width: 64,
-                      height: 64,
-                      child: DraggableWidget(
-                        child: Image.file(File(imgFile.path)),
-                        onVerticalDrag: () => setState(() => imgFile.deleteSync()),
-                      ),
-                    ))
-                .toList(),
-          ),
-        ),
-      );
-    } on PathNotFoundException catch (e) {
-      showInSnackBar('PathNotFoundException: $e');
-      return Text('$e');
-    }
-  }
-
-  Widget _addMetadataButton() => IconButton(
-      icon: const Icon(Icons.keyboard_arrow_right),
-      onPressed: () => showDialog(
-          context: context,
-          builder: (BuildContext context) => MetadataWidget(
-                bundlePath: getBundlePath,
-              )));
 
   void showInSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -356,9 +322,72 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
   }
 }
 
+class BottomWidget extends StatefulWidget {
+  const BottomWidget({required this.directory, required this.onSubmit});
+  final Directory directory;
+  final void Function() onSubmit;
+
+  @override
+  State<BottomWidget> createState() => _BottomWidgetState();
+}
+
+class _BottomWidgetState extends State<BottomWidget> {
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final images = widget.directory.listSync().where((file) => path.extension(file.path) == '.jpg');
+      return Row(
+        children: <Widget>[
+          _thumbnailWidget(images),
+          _addMetadataButton(context: context, directory: widget.directory, onSubmit: widget.onSubmit),
+        ],
+      );
+    } on PathNotFoundException {
+      return const Text('Tap the screen to take a picture');
+    }
+  }
+
+  /// Display the thumbnail of the captured image or video.
+  Widget _thumbnailWidget(Iterable<FileSystemEntity> images) {
+    return Expanded(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: images
+              .map((imgFile) => SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: DraggableWidget(
+                        // Use a key otherwise if we delete an image, the image that will take its place will inherit the state of the deleted image
+                        key: ValueKey(imgFile.path),
+                        child: Image.file(File(imgFile.path)),
+                        onVerticalDrag: () => setState(() {
+                              imgFile.deleteSync();
+                            })),
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _addMetadataButton(
+          {required BuildContext context, required Directory directory, required void Function() onSubmit}) =>
+      IconButton(
+          icon: const Icon(Icons.keyboard_arrow_right),
+          onPressed: () => showDialog(
+              context: context,
+              builder: (BuildContext context) => MetadataWidget(directory: directory, onSubmit: onSubmit)));
+}
+
 class MetadataWidget extends StatefulWidget {
-  const MetadataWidget({required this.bundlePath});
-  final String bundlePath;
+  const MetadataWidget({
+    required this.directory,
+    required this.onSubmit,
+  });
+  final Directory directory;
+  final void Function() onSubmit;
 
   @override
   State<MetadataWidget> createState() => _MetadataWidgetState();
@@ -394,7 +423,8 @@ class _MetadataWidgetState extends State<MetadataWidget> {
             onPressed: () async {
               final managePerm = await Permission.manageExternalStorage.request();
               print('managePerm = $managePerm');
-              File(path.join(widget.bundlePath, 'metadata.json')).writeAsStringSync(jsonEncode(metadata.toJson()));
+              File(path.join(widget.directory.path, 'metadata.json')).writeAsStringSync(jsonEncode(metadata.toJson()));
+              widget.onSubmit();
             })
       ],
     );

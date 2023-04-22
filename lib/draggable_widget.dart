@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DraggableWidget extends StatefulWidget {
-  const DraggableWidget({required this.child, required this.onVerticalDrag});
+  const DraggableWidget({required super.key, required this.child, required this.onVerticalDrag});
 
   final Widget child;
   final void Function() onVerticalDrag;
