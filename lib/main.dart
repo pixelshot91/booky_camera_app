@@ -403,6 +403,7 @@ class _MetadataWidgetState extends State<MetadataWidget> {
       children: [
         TextFormField(
           initialValue: '',
+          autofocus: true,
           onChanged: (newText) => setState(() => metadata.weightGrams = int.parse(newText)),
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
