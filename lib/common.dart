@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:json_annotation/json_annotation.dart';
 
 part 'common.g.dart';
+
+final bookyDir = Directory('/storage/emulated/0/DCIM/booky/');
 
 enum ItemState {
   brandNew,

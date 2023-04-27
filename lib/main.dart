@@ -9,6 +9,8 @@ import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 
 import 'common.dart' as common;
+import 'common.dart';
+import 'explorer.dart';
 
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
@@ -47,7 +49,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome> with WidgetsBindi
   XFile? imageFile;
   late String bundleName;
 
-  Directory get getBundleDir => Directory('/storage/emulated/0/DCIM/booky/$bundleName');
+  Directory get getBundleDir => Directory(path.join(bookyDir.path, bundleName));
 
   void _generateNewFolderPath() {
     bundleName = DateTime.now().toIso8601String().replaceAll(':', '_');
@@ -448,12 +450,13 @@ class CameraApp extends StatelessWidget {
 List<CameraDescription> _cameras = <CameraDescription>[];
 
 Future<void> main() async {
+  runApp(const MaterialApp(home: Explorer()));
   // Fetch the available cameras before initializing the app.
-  try {
+  /*try {
     WidgetsFlutterBinding.ensureInitialized();
     _cameras = await availableCameras();
   } on CameraException catch (e) {
     _logError(e.code, e.description);
   }
-  runApp(const CameraApp());
+  runApp(const CameraApp());*/
 }
